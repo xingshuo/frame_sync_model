@@ -1,0 +1,5 @@
+skynet/server
+skynet/skynet
+*.spb
+*.so
+*.o

@@ -1,0 +1,43 @@
+#登录 [100, 199)
+c2gs_login 100 {
+    request {
+        pid 0 : integer
+    }
+}
+
+gs2c_loginsuc 101 {
+    request {
+        game_id 0 : integer
+        rndseed 1 : integer
+        timestamp 2 : integer
+        frame_cache 3 : *FrameInfo
+        init_time 4 : integer
+    }
+}
+
+#Game [200, inf)
+gs2c_ping 201 {
+    request {
+        session 0 : integer
+        timestamp 1 : integer
+        is_resp 2 : boolean
+    }
+}
+
+c2gs_ping 202 {
+    request {
+        session 0 : integer
+    }
+}
+
+c2gs_ctrl_data 203 {
+    request {
+        ctrl_data 0 : CtrlInfo
+    }
+}
+
+gs2c_frame_data 204 {
+    request {
+        frame_data 0 : FrameInfo
+    }
+}

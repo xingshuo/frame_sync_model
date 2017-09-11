@@ -1,0 +1,1 @@
+cd skynet && ./skynet server/config/game.lua

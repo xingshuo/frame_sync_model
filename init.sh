@@ -1,0 +1,1 @@
+ln -fs $(pwd)/server $(pwd)/skynet/

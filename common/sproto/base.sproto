@@ -1,0 +1,52 @@
+.Ud {
+    status 0 : integer
+    msg 1 : string
+    timestamp 2 : integer
+}
+
+.BasePackage {
+    type 0 : integer
+    session 1 : integer
+    ud 2 : Ud
+}
+
+.Pos {
+    x 0 : integer
+    z 1 : integer
+}
+
+.Color {
+   r 0 : integer
+   g 1 : integer
+   b 2 : integer
+}
+
+
+.ActionEnter {
+  name 0 : string
+  color 1 : Color
+  pos 2 : Pos
+}
+
+.ActionAttack {
+  status 0 : integer #1.start 2.stop
+}
+
+.ActionMove {
+  dir 0 : integer #1.up 2.down 3.left 4.right
+  status 1 : integer #1.start 2.stop
+}
+
+.CtrlInfo {
+  pid 0 : integer
+  action 1 : integer #1.ACTION_ENTER 2.ACTION_LEAVE 3.ACTION_ATTACK 4.ACTION_MOVE
+  enter_info 2 : ActionEnter
+  attack_info 3 : ActionAttack
+  move_info 4 : ActionMove
+}
+
+.FrameInfo {
+  frame_number 0 : integer
+  ctrl_data 1 : *CtrlInfo
+  timestamp 2 : integer
+}
