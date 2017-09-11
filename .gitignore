@@ -3,3 +3,4 @@ skynet/skynet
 *.spb
 *.so
 *.o
+*.pyc
