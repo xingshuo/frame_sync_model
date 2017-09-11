@@ -10,9 +10,12 @@ all: build-skynet
 build-skynet:
 	cd skynet && $(MAKE) linux
 
+$(BUILD):
+	mkdir $(BUILD)
+
 all: sproto
 
-sproto:
+sproto: | $(BUILD)
 	export LUA_CPATH=$(TOP)/skynet/luaclib/?.so && cd $(TOP)/3rd/sprotodump/ \
 	&& $(TOP)/bin/lua sprotodump.lua -spb `find -L $(TOP)/common/sproto/  -name "*.sproto"` -o $(TOP)/build/sproto.spb
 
