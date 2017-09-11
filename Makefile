@@ -18,7 +18,7 @@ sproto:
 
 pysproto:
 	cd $(TOP)/3rd/pysproto && $(TOP)/bin/python setup.py build \
-	&& $(TOP)/bin/python setup.py install && rm -rf build pysproto.egg-info
+	&& $(TOP)/bin/python setup.py install && rm -rf build pysproto.egg-info dist
 
 clean:
 	rm -f $(BUILD_DIR)/luaclib/*
