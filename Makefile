@@ -11,7 +11,7 @@ build-skynet:
 	cd skynet && $(MAKE) linux
 
 $(BUILD):
-	mkdir $(BUILD)
+	mkdir $(BUILD_DIR)
 
 all: sproto | $(BUILD)
 
