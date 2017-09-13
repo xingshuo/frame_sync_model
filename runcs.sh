@@ -1,1 +1,1 @@
-cd client && ../bin/python main.py $1
+cd client && ../bin/python main.py $1 $2

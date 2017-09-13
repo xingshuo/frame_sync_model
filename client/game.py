@@ -430,7 +430,8 @@ class CGameObj:
         self.m_Surface.fill(COLOR_WHITE)
         for uuid,obj in self.m_AllEntityObjects.items():
             obj.draw()
-
+        text = self.m_ChineseFont.render("HOST:%s:%d"%(self.m_RpcObj.addr[0],self.m_RpcObj.addr[1]), True, COLOR_RED)
+        self.m_Surface.blit(text, (100,10))
         text = self.m_ChineseFont.render("RTT:%fMS"%(self.m_RTT*1000), True, COLOR_RED)
         self.m_Surface.blit(text, (600,50))
         text = self.m_ChineseFont.render("SCORE:%d/%d"%(self.m_CurScore,self.m_GoalScore), True, COLOR_BLUE)
