@@ -1,6 +1,7 @@
 skynet/server
 skynet/skynet
 skynet/3rd/jemalloc/
+client/config.json
 *.spb
 *.so
 *.o
