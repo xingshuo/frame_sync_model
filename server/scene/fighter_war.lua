@@ -1,6 +1,8 @@
 --飞机大战
 local Class = require "lualib.class"
 local Skynet = require "lualib.local_skynet"
+local Debug = require "lualib.debug"
+local Socketdriver = require "socketdriver"
 local Env = import "scene/env"
 local TimerObj = import "lualib/object"
 local FrameMgr = import "scene/frame_mgr"
@@ -33,12 +35,23 @@ function FighterWar:init(game_id, mArgs)
     self.m_Players = {}
     self.m_RndSeed = math.random(1,10000)
     self.m_FrameMgr:start()
+    self:AddTimer(500, function () self:check_over() end, "CheckOver")
+    Debug.fprint("---game %s-%s start---",self.m_GameModeID,self.m_GameID)
 end
 
 function FighterWar:release()
     Env.DelGameObj(self.m_GameID)
     self.m_FrameMgr:release()
     self.m_FrameMgr = nil
+end
+
+function FighterWar:check_over()
+    if next(self.m_Players) ~= nil then
+        return
+    end
+    local ret = Skynet.call("SCENE_MGR", "lua", "game_over", self.m_GameModeID, self.m_GameID)
+    Debug.fprint("---game %s-%s over %s---",self.m_GameModeID,self.m_GameID,ret)
+    self:RemoveTimer("CheckOver")
 end
 
 function FighterWar:add_player(pid, mArgs)
@@ -108,6 +121,13 @@ end
 
 function FighterWar:get_bc()
     return SceneApi.get_scene_broadcast(self.m_GameID)
+end
+
+function FighterWar:kick_player(pid)
+    local oPlayer = self.m_Players[pid]
+    if oPlayer then
+        Socketdriver.close(oPlayer.m_Fd)
+    end
 end
 
 function NewGame(game_id, mArgs)

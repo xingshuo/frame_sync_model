@@ -43,6 +43,16 @@ function GameMgr:pop_proxy()
     table.remove(self.m_SceneProxyList, 1)
 end
 
+function GameMgr:del_proxy( game_id )
+    for idx,oProxy in ipairs(self.m_SceneProxyList) do
+        if oProxy.game_id == game_id then
+            table.remove(self.m_SceneProxyList, idx)
+            return true
+        end
+    end
+    return false
+end
+
 command = {}
 
 function command.enter_player(game_mode_id, pid, mArgs)
@@ -57,4 +67,9 @@ function command.enter_player(game_mode_id, pid, mArgs)
         mobj:pop_proxy()
     end
     return pobj
+end
+
+function command.game_over(game_mode_id, game_id)
+    local mobj = get_game_mgr(game_mode_id)
+    return mobj:del_proxy(game_id)
 end

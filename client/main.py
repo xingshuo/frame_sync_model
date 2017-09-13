@@ -54,12 +54,15 @@ class Client:
 
 def init():
 	pid = 1
+	host = None
 	if len(sys.argv) > 1:
 		pid = int(sys.argv[1])
+		if len(sys.argv) > 2:
+			host = sys.argv[2]
 	f = file('config.json')
 	cfg = json.load(f)
 	f.close()
-	cs = Client({'host':cfg["host"],'port':cfg["port"],'pid':pid})
+	cs = Client({'host':host or cfg["host"],'port':cfg["port"],'pid':pid})
 	cs.start()
 
 if __name__ == "__main__":

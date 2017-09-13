@@ -141,6 +141,8 @@ class CBaseObj(object):
 
     def update(self):
         if self.is_dead() or self.is_out_screen():
+            if self.is_dead() and self.is_enemy():
+                self.m_GameObj.add_score(self.m_RewardScore)
             self.m_GameObj.destroy_entity(self)
             return
         if self.m_Dir:
@@ -174,6 +176,7 @@ class CEnemyObj(CBaseObj):
         self.m_Pos = [RandomInt(1, SCREEN_WIDTH-1),RandomInt(1, 50)]
         self.m_Speed = RandomInt(20,60)
         self.m_Blood = 1
+        self.m_RewardScore = 100
         super(CEnemyObj,self).__init__(gobj)
         self.m_Dir = DIR_DOWN
 
@@ -302,6 +305,9 @@ class CGameObj:
         self.m_lRTTValues = []
         self.m_dRTTSessions = {}
         self.m_RTT = 0
+        self.m_CurScore = 0
+        self.m_GoalScore = 1000
+        self.m_GameOver = False
 
     def release(self):
         self.m_RpcObj = None
@@ -321,6 +327,8 @@ class CGameObj:
                     self.m_MainRole.touch_key_up(event.key)
 
     def update_logic(self):
+        if self.m_GameOver:
+            return
         if RandomInt(1,10) <= 2:
              self.create_entity(ENTITY_ENEMY)
 
@@ -340,6 +348,11 @@ class CGameObj:
 
         for uuid,obj in self.m_AllEntityObjects.items():
             obj.update()
+        if self.m_GameOver:
+            for id,obj in self.m_BulletObjects.items():
+                self.destroy_entity(obj)
+            for id,obj in self.m_EnemyObjects.items():
+                self.destroy_entity(obj)
 
     def game_draw_rect(self, color, lt_pos, rb_pos, _width = 0):
         width = rb_pos[0] - lt_pos[0]
@@ -420,6 +433,12 @@ class CGameObj:
 
         text = self.m_ChineseFont.render("RTT:%fMS"%(self.m_RTT*1000), True, COLOR_RED)
         self.m_Surface.blit(text, (600,50))
+        text = self.m_ChineseFont.render("SCORE:%d/%d"%(self.m_CurScore,self.m_GoalScore), True, COLOR_BLUE)
+        self.m_Surface.blit(text, (600,100))
+        if self.m_GameOver:
+            font = pygame.font.Font("SIMSUN.TTC",60)
+            text = font.render("YOU WIN!", True, COLOR_RED)
+            self.m_Surface.blit(text, (250,300))
 
     def main_loop(self):
         pygame.init()
@@ -471,3 +490,8 @@ class CGameObj:
         else:
             self.m_dRTTSessions[session] = time.time()
             self.m_RpcObj.send("c2gs_ping", {'session':session})
+
+    def add_score(self, score):
+        self.m_CurScore += score
+        if self.m_CurScore >= self.m_GoalScore:
+            self.m_GameOver = True

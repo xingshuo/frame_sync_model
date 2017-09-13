@@ -9,13 +9,13 @@ command = {}
 function command.start(pid, mArgs)
 	local pobj = player.NewPlayer(pid, mArgs)
 	pobj:login()
-    pobj:enterwar()
+	pobj:enterwar()
 end
 
 function command.kick(pid)
 	local pobj = env.get_player(pid)
 	if pobj then
-        pobj:leavewar()
+		pobj:leavewar()
 		pobj:quit()
 	end
 end
