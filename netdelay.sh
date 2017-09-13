@@ -1,8 +1,11 @@
 #!/bin/bash
 
-#sh netdelay.sh add #add qdisc
-#sh netdelay.sh chg [延迟] [延迟波动] [丢包率]
-#sh netdelay.sh del  #del qdisc
+:<<annotation
+sh netdelay.sh add #add qdisc
+sh netdelay.sh chg [延迟] [延迟波动] [丢包率]
+sh netdelay.sh del  #del qdisc
+annotation
+
 
 DEV='wlan0'
 
