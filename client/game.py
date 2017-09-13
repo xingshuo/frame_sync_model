@@ -176,7 +176,7 @@ class CEnemyObj(CBaseObj):
         self.m_Pos = [RandomInt(1, SCREEN_WIDTH-1),RandomInt(1, 50)]
         self.m_Speed = RandomInt(20,60)
         self.m_Blood = 1
-        self.m_RewardScore = 100
+        self.m_RewardScore = 10
         super(CEnemyObj,self).__init__(gobj)
         self.m_Dir = DIR_DOWN
 
