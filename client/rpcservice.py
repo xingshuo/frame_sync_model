@@ -75,13 +75,17 @@ class AsyncRpcService:
     def _dispatch_request(self, protoname, msg):
         if self.owner:
             #if not (protoname in ["gs2c_frame_data","gs2c_ping"]):
-            print "recv net data",protoname,msg
+            #print "recv net data",protoname,msg
             if protoname == "gs2c_loginsuc":
                 self.owner.m_GameObj.init_fsm(msg)
             elif protoname == "gs2c_frame_data":
-                self.owner.m_GameObj.update_frame(msg["frame_data"])
+                self.owner.m_GameObj.recv_frame(msg["frame_data"])
             elif protoname == "gs2c_ping":
                 self.owner.m_GameObj.server_ping(msg["session"], msg["is_resp"])
+            elif protoname == "gs2c_rtt_data":
+                self.owner.m_GameObj.gs2c_rtt_data(msg)
+            elif protoname == "gs2c_frame_cache_data":
+                self.owner.m_GameObj.gs2c_frame_cache_data(msg["frame_cache"])
         else:
             print "%s no handler" % protoname, msg
         

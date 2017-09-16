@@ -10,8 +10,14 @@ gs2c_loginsuc 101 {
         game_id 0 : integer
         rndseed 1 : integer
         timestamp 2 : integer
-        frame_cache 3 : *FrameInfo
+        frame_cache_num 3 : integer
         init_time 4 : integer
+    }
+}
+
+gs2c_frame_cache_data 102 {
+    request {
+        frame_cache 0 : *FrameInfo
     }
 }
 
@@ -39,5 +45,23 @@ c2gs_ctrl_data 203 {
 gs2c_frame_data 204 {
     request {
         frame_data 0 : FrameInfo
+    }
+}
+
+c2gs_rtt_data 205 {
+    request {
+        avg_rtt 0 : integer
+        min_rtt 1 : integer
+        max_rtt 2 : integer
+        cur_rtt 3 : integer
+    }
+}
+
+gs2c_rtt_data 206 {
+    request {
+        avg_rtt 0 : integer
+        min_rtt 1 : integer
+        max_rtt 2 : integer
+        cur_rtt 3 : integer
     }
 }

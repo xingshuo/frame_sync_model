@@ -11,5 +11,9 @@ function Analysis(pid, proto, param)
 		if pobj then
 			pobj:sync_ctrl(param)
 		end
+	elseif proto == "c2gs_rtt_data" then
+		if pobj then
+			skynet_send(pobj.m_SceneAgent, "c2gs_rtt_data", pobj.m_GameID, pobj.m_ID, param)
+		end
 	end
 end

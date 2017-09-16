@@ -9,6 +9,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 import random
+import Queue
 
 #===========const defines============
 COLOR_BLACK = (0,0,0)
@@ -147,13 +148,13 @@ class CBaseObj(object):
             return
         if self.m_Dir:
             if self.m_Dir == DIR_UP:
-                self.m_Pos[1] = self.m_Pos[1] - self.m_Speed
+                self.m_Pos[1] = self.m_Pos[1] - self.m_Speed/4
             elif self.m_Dir == DIR_DOWN:
-                self.m_Pos[1] = self.m_Pos[1] + self.m_Speed
+                self.m_Pos[1] = self.m_Pos[1] + self.m_Speed/4
             elif self.m_Dir == DIR_LEFT:
-                self.m_Pos[0] = self.m_Pos[0] - self.m_Speed
+                self.m_Pos[0] = self.m_Pos[0] - self.m_Speed/4
             elif self.m_Dir == DIR_RIGHT:
-                self.m_Pos[0] = self.m_Pos[0] + self.m_Speed
+                self.m_Pos[0] = self.m_Pos[0] + self.m_Speed/4
 
             if self.is_player():
                 if self.m_Pos[0] < 0:
@@ -211,11 +212,11 @@ class CPlayerObj(CBaseObj):
         self.m_Dir = None
         self.m_InAttack = False
         self.m_AckLoopCnt = 0
-        self.m_Blood = 1000
+        self.m_Blood = 3000
         super(CPlayerObj,self).__init__(gobj)
 
     def name(self):
-        return u"%s[%d,%d] %d"%(self.m_Name,self.m_Pos[0],self.m_Pos[1], self.m_GameObj.m_GameID)
+        return u"%s[%d,%d]"%(self.m_Name,self.m_Pos[0],self.m_Pos[1])
 
     def draw(self):
         super(CPlayerObj,self).draw()
@@ -305,9 +306,21 @@ class CGameObj:
         self.m_lRTTValues = []
         self.m_dRTTSessions = {}
         self.m_RTT = 0
+        self.m_OldRTT = 0
+        self.m_MaxRTT = -1
+        self.m_MinRTT = 10000
+        self.m_AvgRTT = 0
+        self.m_SumRTT = 0
+        self.m_RTTStartMS = time.time()
+        self.m_RTTLastMS = time.time()
         self.m_CurScore = 0
-        self.m_GoalScore = 1000
+        self.m_GoalScore = 3000
         self.m_GameOver = False
+        self.m_GSRTT = None
+        self.m_PassTime = 0 #cs
+        self.m_FrameQueue = Queue.Queue()
+        self.m_GSFrameNo = 0
+        self.m_FsmInitData = None
 
     def release(self):
         self.m_RpcObj = None
@@ -327,27 +340,20 @@ class CGameObj:
                     self.m_MainRole.touch_key_up(event.key)
 
     def update_logic(self):
+        self.m_PassTime += 100.0/FRAME_TICK
         if self.m_GameOver:
             return
-        if RandomInt(1,10) <= 2:
-             self.create_entity(ENTITY_ENEMY)
+        if self.m_FrameQueue.empty():
+            #print self.m_PassTime,"no frame"
+            return
+        while self.m_FrameQueue.qsize() > 0:
+            data = self.m_FrameQueue.queue[0]
+            if data["timestamp"] - self.m_GSFsmInitTime <= self.m_PassTime:
+                data = self.m_FrameQueue.get_nowait()
+                self.update_frame(data)
+            else:
+                break
 
-        for id1,obj1 in self.m_BulletObjects.items():
-            for id2,obj2 in self.m_EnemyObjects.items():
-                if not obj1.is_dead() and not obj2.is_dead():
-                    if Is2RectsCross(obj1.pos(), obj1.m_Width, obj1.m_Height, obj2.pos(), obj2.m_Width, obj2.m_Height):
-                        obj1.on_hit()
-                        obj2.on_hit()
-
-        for id1,obj1 in self.m_EnemyObjects.items():
-            for id2,obj2 in self.m_PlayerObjects.items():
-                if not obj1.is_dead() and not obj2.is_dead():
-                    if Is2RectsCross(obj1.pos(), obj1.m_Width, obj1.m_Height, obj2.pos(), obj2.m_Width, obj2.m_Height):
-                        obj1.on_hit()
-                        obj2.on_hit()
-
-        for uuid,obj in self.m_AllEntityObjects.items():
-            obj.update()
         if self.m_GameOver:
             for id,obj in self.m_BulletObjects.items():
                 self.destroy_entity(obj)
@@ -403,6 +409,8 @@ class CGameObj:
         obj.release()
 
     def update_frame(self, msg):
+        self.m_GSFrameNo = msg["frame_number"]
+        self.update_ctrl_once()
         oplist = msg["ctrl_data"]
         for ctrl in oplist:
             pid = ctrl["pid"]
@@ -424,18 +432,51 @@ class CGameObj:
             elif ctrl["action"] == ACTION_MOVE:
                 pobj = self.get_player(pid)
                 if pobj:
+                    #print self.m_PassTime,"player %d pos %d,%d"%(pobj.m_Pid,pobj.m_Pos[0],pobj.m_Pos[1]),"ctrl",ctrl
                     pobj.handle_move(ctrl["move_info"]["dir"],ctrl["move_info"]["status"])
+
+            self.update_ctrl_once()
+
+    def update_ctrl_once(self):
+        if RandomInt(1,20) <= 1:
+            self.create_entity(ENTITY_ENEMY)
+
+        for id1,obj1 in self.m_BulletObjects.items():
+            for id2,obj2 in self.m_EnemyObjects.items():
+                if not obj1.is_dead() and not obj2.is_dead():
+                    if Is2RectsCross(obj1.pos(), obj1.m_Width, obj1.m_Height, obj2.pos(), obj2.m_Width, obj2.m_Height):
+                        obj1.on_hit()
+                        obj2.on_hit()
+
+        for id1,obj1 in self.m_EnemyObjects.items():
+            for id2,obj2 in self.m_PlayerObjects.items():
+                if not obj1.is_dead() and not obj2.is_dead():
+                    if Is2RectsCross(obj1.pos(), obj1.m_Width, obj1.m_Height, obj2.pos(), obj2.m_Width, obj2.m_Height):
+                        obj1.on_hit()
+                        obj2.on_hit()
+
+        for uuid,obj in self.m_AllEntityObjects.items():
+            obj.update()
+
+    def recv_frame(self, msg):
+        self.m_FrameQueue.put_nowait(msg)
 
     def draw_world(self):
         self.m_Surface.fill(COLOR_WHITE)
         for uuid,obj in self.m_AllEntityObjects.items():
             obj.draw()
-        text = self.m_ChineseFont.render("HOST:%s:%d"%(self.m_RpcObj.addr[0],self.m_RpcObj.addr[1]), True, COLOR_RED)
+        text = self.m_ChineseFont.render("GAME_ID:%d PassTime:%f GSFrameNo:%d"%(self.m_GameID,self.m_PassTime,self.m_GSFrameNo), True, COLOR_GREEN)
         self.m_Surface.blit(text, (100,10))
-        text = self.m_ChineseFont.render("RTT:%fMS"%(self.m_RTT*1000), True, COLOR_RED)
-        self.m_Surface.blit(text, (600,50))
+        text = self.m_ChineseFont.render("HOST:%s:%d"%(self.m_RpcObj.addr[0],self.m_RpcObj.addr[1]), True, COLOR_RED)
+        self.m_Surface.blit(text, (100,60))
+        text = self.m_ChineseFont.render("CSRTT:%f[%f,%f,%f]MS"%(self.m_OldRTT*1000,self.m_MinRTT*1000,self.m_AvgRTT*1000,self.m_MaxRTT*1000), True, COLOR_PINK)
+        self.m_Surface.blit(text, (100,110))
         text = self.m_ChineseFont.render("SCORE:%d/%d"%(self.m_CurScore,self.m_GoalScore), True, COLOR_BLUE)
-        self.m_Surface.blit(text, (600,100))
+        self.m_Surface.blit(text, (100,160))
+        if self.m_GSRTT:
+            text = self.m_ChineseFont.render("GSRTT:%f[%f,%f,%f]MS"%(self.m_GSRTT["cur_rtt"]*10.0,self.m_GSRTT["min_rtt"]*10.0,self.m_GSRTT["avg_rtt"]*10.0,self.m_GSRTT["max_rtt"]*10.0), True, COLOR_PINK)
+            self.m_Surface.blit(text, (100,210))
+
         if self.m_GameOver:
             font = pygame.font.Font("SIMSUN.TTC",60)
             text = font.render("YOU WIN!", True, COLOR_RED)
@@ -456,28 +497,8 @@ class CGameObj:
             clock.tick(FRAME_TICK)
 
     def init_fsm(self, msg):
-        rndseed = msg["rndseed"]
-        game_id = msg["game_id"]
-        SetRndSeed(rndseed)
-        self.m_GameID = game_id
-        self.m_FSMInitTime = msg["init_time"]
-        end_time = msg["timestamp"]
-        dt = end_time - self.m_FSMInitTime
-        frame_cache = msg["frame_cache"]
-        sum_time = 0
-        while sum_time < dt:
-            self.update_logic()
-            sum_time += 100.0/FRAME_TICK
-            while len(frame_cache) > 0:
-                data = frame_cache[0]
-                if data["timestamp"] - self.m_FSMInitTime < sum_time:
-                    self.update_frame(data)
-                    frame_cache.pop(0)
-                else:
-                    break
-
-        global FSM_OPEN
-        FSM_OPEN = True
+        self.m_FsmInitData = msg
+        self.gs2c_frame_cache_data([])
 
     def server_ping(self, session, is_resp):
         if is_resp:
@@ -488,11 +509,53 @@ class CGameObj:
             if len(self.m_lRTTValues) > 5:
                 self.m_lRTTValues.pop(0)
             self.m_RTT = sum(self.m_lRTTValues)/len(self.m_lRTTValues)
+            if abs(self.m_OldRTT - self.m_RTT) >= 0.05:
+                self.m_OldRTT = self.m_RTT
+                self.refresh_rtt(self.m_RTT)
         else:
-            self.m_dRTTSessions[session] = time.time()
-            self.m_RpcObj.send("c2gs_ping", {'session':session})
+            if not self.m_dRTTSessions.get(session,None):
+                self.m_dRTTSessions[session] = time.time()
+                self.m_RpcObj.send("c2gs_ping", {'session':session})
+
+    def refresh_rtt(self, val):
+        ti = time.time()
+        dt = ti - self.m_RTTLastMS
+        self.m_RTTLastMS = ti
+        self.m_SumRTT = self.m_SumRTT + dt*self.m_RTT
+        self.m_RTT = val
+        if val > self.m_MaxRTT:
+            self.m_MaxRTT = val
+        if val < self.m_MinRTT:
+            self.m_MinRTT = val
+        dt = ti - self.m_RTTStartMS
+        if dt > 0:
+            self.m_AvgRTT = self.m_SumRTT/dt
 
     def add_score(self, score):
         self.m_CurScore += score
         if self.m_CurScore >= self.m_GoalScore:
             self.m_GameOver = True
+
+    def gs2c_rtt_data(self, gs_data):
+        self.m_GSRTT = gs_data
+
+    def gs2c_frame_cache_data(self, frame_cache):
+        msg = self.m_FsmInitData
+        if not msg:
+            return
+        for data in frame_cache:
+            self.recv_frame(data)
+        if self.m_FrameQueue.qsize() >= msg["frame_cache_num"]:
+            self.m_FsmInitData = None
+            rndseed = msg["rndseed"]
+            game_id = msg["game_id"]
+            SetRndSeed(rndseed)
+            self.m_GameID = game_id
+            self.m_GSFsmInitTime = msg["init_time"]
+            end_time = msg["timestamp"]
+            dt = end_time - self.m_GSFsmInitTime
+            while self.m_PassTime < dt:
+                self.update_logic()
+
+            global FSM_OPEN
+            FSM_OPEN = True

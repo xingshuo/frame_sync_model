@@ -7,7 +7,7 @@ sh netdelay.sh del  #del qdisc
 annotation
 
 
-DEV='wlan0'
+DEV='lo'
 
 case "$1" in
     add)

@@ -12,7 +12,6 @@ function command.UpackData(fd, msg, sz)
     local proto,param = Net.unpack(msg, sz)
     if proto == "c2gs_login" then
         local pid = param.pid
-        print("c2gs_login",pid)
         local name = Utils.random_name()
         local color = Utils.random_color()
         local agent = AgentApi.get_user_agent(pid)

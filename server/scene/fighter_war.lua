@@ -18,6 +18,45 @@ function FWPlayer:init(oGame, mArgs)
     self.m_Color = mArgs.color
     self.m_GameObj = oGame
     self.m_Pos = {x = math.random(1,800), z = math.random(550,600)}
+    self.m_RTT = 0
+    self.m_MaxRTT = -1
+    self.m_MinRTT = 10000
+    self.m_AvgRTT = 0
+    self.m_SumRTT = 0
+    self.m_RTTStartCS = GetCSecond()
+end
+
+function FWPlayer:sync_data(key, val)
+    if key == "rtt" then
+        local dt
+        local ti = GetCSecond()
+        if self.m_RTTLastCS then
+            dt = ti - self.m_RTTLastCS
+        else
+            dt = ti - self.m_RTTStartCS
+        end
+        self.m_RTTLastCS = ti
+        self.m_SumRTT = self.m_SumRTT + dt*self.m_RTT
+        self.m_RTT = val
+        if val > self.m_MaxRTT then
+            self.m_MaxRTT = val
+        end
+        if val < self.m_MinRTT then
+            self.m_MinRTT = val
+        end
+        dt = ti - self.m_RTTStartCS
+        if dt > 0 then
+            self.m_AvgRTT = math.floor(self.m_SumRTT/dt)
+        end
+    end
+end
+
+function FWPlayer:gs2c_rtt_data()
+    if not self.m_RTTLastCS then
+        return
+    end
+    self:sync_data("rtt", self.m_RTT)
+    self.m_GameObj:Send2Player(self.m_Pid, "gs2c_rtt_data", {cur_rtt = self.m_RTT, avg_rtt = self.m_AvgRTT, min_rtt = self.m_MinRTT, max_rtt = self.m_MaxRTT})
 end
 
 function FWPlayer:release()
@@ -36,6 +75,7 @@ function FighterWar:init(game_id, mArgs)
     self.m_RndSeed = math.random(1,10000)
     self.m_FrameMgr:start()
     self:AddTimer(500, function () self:check_over() end, "CheckOver")
+    self:AddTimer(100, function () self:sync_rtt() end, "SyncRtt")
     Debug.fprint("---game %s-%s start---",self.m_GameModeID,self.m_GameID)
 end
 
@@ -45,11 +85,21 @@ function FighterWar:release()
     self.m_FrameMgr = nil
 end
 
+function FighterWar:sync_rtt()
+    for pid,pobj in pairs(self.m_Players) do
+        pobj:gs2c_rtt_data()
+    end
+end
+
 function FighterWar:check_over()
     if next(self.m_Players) ~= nil then
         return
     end
-    local ret = Skynet.call("SCENE_MGR", "lua", "game_over", self.m_GameModeID, self.m_GameID)
+    self:game_over()
+end
+
+function FighterWar:game_over()
+    local ret = skynet_call("SCENE_MGR", "game_over", self.m_GameModeID, self.m_GameID)
     Debug.fprint("---game %s-%s over %s---",self.m_GameModeID,self.m_GameID,ret)
     self:RemoveTimer("CheckOver")
 end
@@ -60,14 +110,33 @@ function FighterWar:add_player(pid, mArgs)
     end
     local oPlayer = FWPlayer:new(self, mArgs)
     self.m_Players[pid] = oPlayer
+    local frame_cache = self.m_FrameMgr:frame_cache()
+    local frame_cache_num = #frame_cache
     local param = {
         game_id = self.m_GameID,
         rndseed = self.m_RndSeed,
         timestamp = Skynet.now(),
         init_time = self.m_FSMInitTime,
-        frame_cache = self.m_FrameMgr:frame_cache(),
+        frame_cache_num = frame_cache_num,
     }
     self:Send2Player(pid, "gs2c_loginsuc", param)
+    local iPiece = 500
+    local iCnt = 1
+    local i = 1
+    local pkglist = {}
+    while iCnt <= frame_cache_num do
+        pkglist[i] = frame_cache[iCnt]
+        if i >= iPiece then
+            self:Send2Player(pid, "gs2c_frame_cache_data", {frame_cache = pkglist})
+            pkglist = {}
+            i = 0
+        end
+        i = i + 1
+        iCnt = iCnt + 1
+    end
+    if #pkglist > 0 then
+        self:Send2Player(pid, "gs2c_frame_cache_data", {frame_cache = pkglist})
+    end
     local ctrl_data = {
         pid = pid,
         action = ACTION_ENTER,

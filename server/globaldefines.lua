@@ -40,6 +40,14 @@ function IsValueInList(value, list)
     return false
 end
 
+function skynet_call(service, cmd, ...)
+    return Skynet.call(service, "lua", cmd, ...)
+end
+
+function skynet_send(service, cmd, ...)
+    Skynet.send(service, "lua", cmd, ...)
+end
+
 -- ti: 执行间隔，单位百分之一秒(10ms)
 -- count：0表示无限次数, >0 有限次
 -- handle : 自定义(int,string等常量key)或系统分配

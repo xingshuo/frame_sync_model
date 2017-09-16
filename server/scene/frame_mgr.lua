@@ -18,16 +18,14 @@ function FrameMgr:start()
 end
 
 function FrameMgr:frame_skip()
-    if #self.m_CtrlDataQueue > 0 then
-        local param = {
-            frame_number = self.m_CurFrameNo,
-            ctrl_data = self.m_CtrlDataQueue,
-            timestamp = Skynet.now(),
-        }
-        self.m_GameObj:BC2Players("gs2c_frame_data", {frame_data = param})
-        table.insert(self.m_FrameCacheQueue, param)
-        self.m_CtrlDataQueue = {}
-    end
+    local param = {
+        frame_number = self.m_CurFrameNo,
+        ctrl_data = self.m_CtrlDataQueue,
+        timestamp = Skynet.now(),
+    }
+    self.m_GameObj:BC2Players("gs2c_frame_data", {frame_data = param})
+    table.insert(self.m_FrameCacheQueue, param)
+    self.m_CtrlDataQueue = {}
     self.m_CurFrameNo = self.m_CurFrameNo + 1
 end
 
